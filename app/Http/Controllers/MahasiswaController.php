@@ -2,63 +2,68 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Mahasiswa;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 
 class MahasiswaController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    private function rules($id = null): array
+    {
+        return [
+            'nim'     => ['required','string','max:20', Rule::unique('mahasiswas','nim')->ignore($id)],
+            'nama'    => 'required|string|max:100',
+            'email'   => 'required|email|max:100',
+            'jurusan' => 'required|string|max:100',
+            'no_hp'   => 'required|string|max:20',
+            'alamat'  => 'required|string|max:255',
+        ];
+    }
+
     public function index()
     {
-        //
+        $mahasiswas = Mahasiswa::latest()->paginate(10);
+        return view('mahasiswa.index', compact('mahasiswas'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        return view('mahasiswa.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $data = $request->validate($this->rules());
+        $data = array_map('strip_tags', $data);               // sanitasi input
+        $data['alamat'] = Crypt::encryptString($data['alamat']); // enkripsi
+        Mahasiswa::create($data);
+
+        return redirect()->route('mahasiswa.index')->with('success', 'Data berhasil ditambahkan');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(string $id)
+    public function edit(Mahasiswa $mahasiswa)
     {
-        //
+        $mahasiswa->alamat = Crypt::decryptString($mahasiswa->alamat); // dekripsi untuk form
+        return view('mahasiswa.edit', compact('mahasiswa'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
+    public function update(Request $request, Mahasiswa $mahasiswa)
     {
-        //
+        $data = $request->validate($this->rules($mahasiswa->id));
+        $data = array_map('strip_tags', $data);
+        $data['alamat'] = Crypt::encryptString($data['alamat']);
+        $mahasiswa->update($data);
+
+        return redirect()->route('mahasiswa.index')->with('success', 'Data berhasil diubah');
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
+    public function destroy(Mahasiswa $mahasiswa)
     {
-        //
-    }
+        Gate::authorize('delete-mahasiswa'); // hanya admin
+        $mahasiswa->delete();
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(string $id)
-    {
-        //
+        return redirect()->route('mahasiswa.index')->with('success', 'Data berhasil dihapus');
     }
 }
