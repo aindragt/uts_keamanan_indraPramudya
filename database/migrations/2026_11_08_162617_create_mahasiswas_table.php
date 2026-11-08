@@ -13,6 +13,12 @@ return new class extends Migration
     {
         Schema::create('mahasiswas', function (Blueprint $table) {
             $table->id();
+            $table->string('nim')->unique();
+            $table->string('nama');
+            $table->string('email');
+            $table->string('jurusan');
+            $table->string('no_hp');
+            $table->text('alamat'); // terenkripsi
             $table->timestamps();
         });
     }
